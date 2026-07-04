@@ -1,13 +1,14 @@
 "use client"
 
 import React, { useState, useEffect, useMemo } from "react"
-import { Monitor, Globe, User, Lock, Eye, EyeOff, Copy } from "lucide-react"
+import { Monitor, Globe, User, Lock, Eye, EyeOff, Copy, ExternalLink } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { LoadingState } from "@/components/ui/loading"
+import { useToast } from "@/hooks/use-toast"
 
 interface Credential {
   browser: string | null
@@ -80,16 +81,38 @@ const HoverableCell = ({
   )
 }
 
-// URL Cell with copy functionality
+// URL Cell - click to open in a new tab, tooltip offers a dedicated copy button
 const UrlCell = ({ url }: { url: string }) => {
-  const _displayContent = url.length > 50 ? `${url.substring(0, 50)}...` : url
+  const { toast } = useToast()
+
+  const openUrl = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (!url) return
+    let href = url
+    if (!/^https?:\/\//i.test(href)) {
+      href = `https://${href}`
+    }
+    window.open(href, "_blank", "noopener,noreferrer")
+  }
+
+  const copyUrl = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    navigator.clipboard.writeText(url)
+    toast({ description: "URL copied to clipboard" })
+  }
 
   return (
     <TooltipProvider delayDuration={200}>
       <Tooltip>
         <TooltipTrigger asChild>
-          <div className="truncate max-w-[350px] cursor-pointer hover:bg-white/5 rounded px-1 py-0.5 transition-colors font-mono">
-            {url}
+          <div
+            onClick={openUrl}
+            role="link"
+            title="Click to open in a new tab"
+            className="group flex items-center gap-1.5 truncate max-w-[350px] cursor-pointer hover:bg-white/5 rounded px-1 py-0.5 transition-colors font-mono hover:text-blue-500 hover:underline"
+          >
+            <span className="truncate">{url}</span>
+            <ExternalLink className="h-3 w-3 shrink-0 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
         </TooltipTrigger>
         <TooltipContent 
@@ -100,10 +123,7 @@ const UrlCell = ({ url }: { url: string }) => {
             <div className="flex items-center justify-between gap-2">
               <span className="text-xs font-semibold text-muted-foreground">Full URL</span>
               <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  navigator.clipboard.writeText(url)
-                }}
+                onClick={copyUrl}
                 className="p-1 hover:bg-white/10 rounded transition-colors"
                 title="Copy URL"
               >
@@ -113,6 +133,7 @@ const UrlCell = ({ url }: { url: string }) => {
             <div className="text-xs font-mono text-foreground break-all glass p-2 rounded border border-white/5">
               {url}
             </div>
+            <div className="text-xs text-muted-foreground">Click the row to open in a new tab</div>
           </div>
         </TooltipContent>
       </Tooltip>
@@ -120,7 +141,7 @@ const UrlCell = ({ url }: { url: string }) => {
   )
 }
 
-// Copyable Cell Component with hover effect and copy functionality
+// Copyable Cell Component - click anywhere on the cell to copy its value
 const CopyableCell = ({ 
   content, 
   label, 
@@ -134,13 +155,24 @@ const CopyableCell = ({
   maxLength?: number
   children?: React.ReactNode
 }) => {
+  const { toast } = useToast()
   const displayContent = maxLength && content.length > maxLength ? `${content.substring(0, maxLength)}...` : content
+
+  const copyContent = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    navigator.clipboard.writeText(content)
+    toast({ description: `${label} copied to clipboard` })
+  }
 
   return (
     <TooltipProvider delayDuration={200}>
       <Tooltip>
         <TooltipTrigger asChild>
-          <div className="cursor-pointer hover:bg-white/5 rounded px-1 py-0.5 transition-colors w-full block truncate">
+          <div
+            onClick={copyContent}
+            title={`Click to copy ${label}`}
+            className="cursor-pointer hover:bg-white/5 rounded px-1 py-0.5 transition-colors w-full block truncate"
+          >
             {children || (
               isPassword ? (
                 <span className="font-mono text-foreground">{displayContent}</span>
@@ -158,10 +190,7 @@ const CopyableCell = ({
             <div className="flex items-center justify-between gap-2">
               <span className="text-xs font-semibold text-muted-foreground">{label}</span>
               <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  navigator.clipboard.writeText(content)
-                }}
+                onClick={copyContent}
                 className="p-1 hover:bg-white/10 rounded transition-colors"
                 title={`Copy ${label}`}
               >
@@ -171,6 +200,7 @@ const CopyableCell = ({
             <div className={`text-xs ${isPassword ? 'font-mono' : ''} text-foreground break-all glass p-2 rounded border border-white/5`}>
               {content}
             </div>
+            <div className="text-xs text-muted-foreground">Click the row to copy</div>
           </div>
         </TooltipContent>
       </Tooltip>

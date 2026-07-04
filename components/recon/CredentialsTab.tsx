@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, type MouseEvent } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Table,
@@ -12,8 +12,9 @@ import {
 } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Key, Eye, EyeOff, Globe, User, Lock, Calendar, ArrowUpDown, ArrowUp, ArrowDown, MoreHorizontal, Copy, HardDrive } from "lucide-react"
+import { Key, Eye, EyeOff, Globe, User, Lock, Calendar, ArrowUpDown, ArrowUp, ArrowDown, MoreHorizontal, Copy, HardDrive, ExternalLink } from "lucide-react"
 import { LoadingState } from "@/components/ui/loading"
+import { useToast } from "@/hooks/use-toast"
 import {
   Select,
   SelectContent,
@@ -56,7 +57,17 @@ const maskPassword = (password: string) => {
   return "•".repeat(Math.min(password.length, 20))
 }
 
-// --- Copyable Cell Component with hover effect and copy functionality ---
+// --- Helper function to open a URL in a new tab ---
+const openUrlInNewTab = (url: string) => {
+  if (!url) return
+  let href = url
+  if (!/^https?:\/\//i.test(href)) {
+    href = `https://${href}`
+  }
+  window.open(href, "_blank", "noopener,noreferrer")
+}
+
+// --- Copyable Cell Component - click anywhere on the cell to copy its value ---
 // FIX: Moved outside component to prevent remounting and UX bugs
 const CopyableCell = ({ 
   content, 
@@ -71,17 +82,28 @@ const CopyableCell = ({
   isMasked?: boolean
   itemId?: number
 }) => {
+  const { toast } = useToast()
   const displayContent = isMasked 
     ? maskPassword(content || "") // Safety check if content null
     : (content || "")
     
   const tooltipKey = itemId ? `copyable-${itemId}-${label}` : `copyable-${label}`
+
+  const copyContent = (e: MouseEvent) => {
+    e.stopPropagation()
+    navigator.clipboard.writeText(content || "")
+    toast({ description: `${label} copied to clipboard` })
+  }
   
   return (
     <TooltipProvider key={tooltipKey} delayDuration={200}>
       <Tooltip>
         <TooltipTrigger asChild>
-          <div className="cursor-pointer hover:glass-card rounded px-1 py-0.5 transition-colors w-full block truncate min-w-0">
+          <div
+            onClick={copyContent}
+            title={`Click to copy ${label}`}
+            className="cursor-pointer hover:glass-card rounded px-1 py-0.5 transition-colors w-full block truncate min-w-0"
+          >
             {isPassword ? (
               <span className="font-mono text-foreground">{displayContent}</span>
             ) : (
@@ -97,10 +119,7 @@ const CopyableCell = ({
             <div key={`${tooltipKey}-header`} className="flex items-center justify-between gap-2">
               <span className="text-xs font-semibold text-muted-foreground">{label}</span>
               <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  navigator.clipboard.writeText(content || "")
-                }}
+                onClick={copyContent}
                 className="p-1 hover:bg-white/5 rounded transition-colors"
                 title={`Copy ${label}`}
               >
@@ -110,6 +129,7 @@ const CopyableCell = ({
             <div key={`${tooltipKey}-content`} className={`text-xs ${isPassword ? 'font-mono' : ''} text-foreground break-all bg-white/5 p-2 rounded border border-border/50`}>
               {content || "-"}
             </div>
+            <div className="text-xs text-muted-foreground">Click the row to copy</div>
           </div>
         </TooltipContent>
       </Tooltip>
@@ -519,8 +539,17 @@ export function CredentialsTab({ targetDomain, searchType = 'domain', keywordMod
                         <TooltipProvider key={`url-tooltip-${item.id}`} delayDuration={200}>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <div className="truncate max-w-[350px] cursor-pointer hover:glass-card rounded px-1 py-0.5 transition-colors">
-                                {item.url}
+                              <div
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  openUrlInNewTab(item.url)
+                                }}
+                                role="link"
+                                title="Click to open in a new tab"
+                                className="group flex items-center gap-1.5 truncate max-w-[350px] cursor-pointer hover:glass-card rounded px-1 py-0.5 transition-colors hover:text-blue-500 hover:underline"
+                              >
+                                <span className="truncate">{item.url}</span>
+                                <ExternalLink className="h-3 w-3 shrink-0 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                               </div>
                             </TooltipTrigger>
                             <TooltipContent 
@@ -544,6 +573,7 @@ export function CredentialsTab({ targetDomain, searchType = 'domain', keywordMod
                                 <div key={`url-content-${item.id}`} className="text-xs font-mono text-foreground break-all bg-white/5 p-2 rounded border border-border/50">
                                   {item.url}
                                 </div>
+                                <div className="text-xs text-muted-foreground">Click the row to open in a new tab</div>
                               </div>
                             </TooltipContent>
                           </Tooltip>
