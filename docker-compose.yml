@@ -68,7 +68,7 @@ services:
         soft: 262144
         hard: 262144
     volumes:
-      - ./clickhouse-data:/var/lib/clickhouse
+      - clickhouse-data:/var/lib/clickhouse
     # Note: ClickHouse will connect to MySQL using hostname "mysql_host"
     # MySQL container hostname is set as "mysql_host", so it can be resolved
     # by other containers in the same network
@@ -162,3 +162,6 @@ services:
         condition: service_started
     # This service will exit automatically after completion (exit 0)
     restart: "no"
+
+volumes:
+  clickhouse-data:
