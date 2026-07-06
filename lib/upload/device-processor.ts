@@ -14,6 +14,7 @@ import {
 import { isLikelyTextFile } from "./zip-structure-analyzer"
 import { chunkArray } from "@/lib/utils"
 import { settingsManager } from "@/lib/settings"
+import { shouldSkipCredential } from "./filters"
 import { getStorageProvider } from "@/lib/storage"
 
 export interface DeviceProcessingResult {
@@ -183,6 +184,11 @@ export async function processDevice(
   const batchSettings = await settingsManager.getBatchSettings()
   const credentialsBatchSize = batchSettings.credentialsBatchSize
   
+  // Load filter settings once for this device
+  const filterSettings = await settingsManager.getFilterSettings()
+  let junkSkipped = 0
+  let domainFiltered = 0
+
   // Phase 1: Prepare and validate all credentials (keep all business logic)
   const validCredentials: Array<{
     url: string
@@ -208,7 +214,18 @@ export async function processDevice(
         credentialsSkipped++
         continue
       }
-      
+
+      // Apply domain/URL exclusion filters
+      const filterResult = shouldSkipCredential(credential.url, credential.username, filterSettings)
+      if (filterResult.skip) {
+        if (filterResult.reason === "domain_filtered") {
+          domainFiltered++
+        } else {
+          junkSkipped++
+        }
+        continue
+      }
+
       // Log password info for debugging
       logPasswordInfo(credential.password, `Saving credential for ${credential.url}`)
       
@@ -287,7 +304,8 @@ export async function processDevice(
     }
   }
 
-  logWithBroadcast(`✅ Successfully saved ${credentialsSaved}/${allCredentials.length} credentials (${credentialsSkipped} skipped)`, "success")
+  const filterSummary = `${junkSkipped} junk, ${domainFiltered} domain-filtered`
+  logWithBroadcast(`✅ Successfully saved ${credentialsSaved}/${allCredentials.length} credentials (${credentialsSkipped} skipped, ${filterSummary})`, "success")
 
   // Store password stats - OPTIMIZED WITH BULK INSERT
   const passwordStatsBatchSize = batchSettings.passwordStatsBatchSize

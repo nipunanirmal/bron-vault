@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useRef, useCallback } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Settings, Save, AlertCircle, Info, Upload, Database, ShieldAlert, HardDrive, CheckCircle2, XCircle, Loader2, AlertTriangle, Rss } from "lucide-react"
+import { Settings, Save, AlertCircle, Info, Upload, Database, ShieldAlert, HardDrive, CheckCircle2, XCircle, Loader2, AlertTriangle, Rss, Filter } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { FeedConfigurationTab } from "@/components/settings/feed-configuration-tab"
+import { FilterConfigurationTab } from "@/components/settings/filter-configuration-tab"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -137,7 +138,7 @@ export default function SettingsPage() {
         </div>
 
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-          <TabsList className="items-center justify-center rounded-md p-1 text-muted-foreground grid w-full grid-cols-2 md:grid-cols-4 glass-card h-auto md:h-8 gap-1">
+          <TabsList className="items-center justify-center rounded-md p-1 text-muted-foreground grid w-full grid-cols-2 md:grid-cols-5 glass-card h-auto md:h-8 gap-1">
             <TabsTrigger
               value="upload"
               className="text-xs font-normal data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-2 py-1 hover:bg-white/5 hover:text-foreground transition-colors"
@@ -166,6 +167,13 @@ export default function SettingsPage() {
               <Rss className="h-3 w-3 mr-1" />
               News Feed
             </TabsTrigger>
+            <TabsTrigger
+              value="filters"
+              className="text-xs font-normal data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-2 py-1 hover:bg-white/5 hover:text-foreground transition-colors"
+            >
+              <Filter className="h-3 w-3 mr-1" />
+              Filters
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="upload" className="mt-4">
@@ -182,6 +190,10 @@ export default function SettingsPage() {
 
           <TabsContent value="feeds" className="mt-4">
             <FeedConfigurationTab />
+          </TabsContent>
+
+          <TabsContent value="filters" className="mt-4">
+            <FilterConfigurationTab />
           </TabsContent>
         </Tabs>
       </div>

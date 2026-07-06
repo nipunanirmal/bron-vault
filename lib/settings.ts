@@ -36,6 +36,13 @@ export const SETTING_KEYS = {
   STORAGE_MIGRATION_PROGRESS: 'storage_migration_progress',
   // Feed settings
   FEED_SYNC_INTERVAL: 'feed_sync_interval',
+  // Filter / exclusion settings
+  FILTER_JUNK_PREFIXES: 'filter_junk_prefixes',
+  FILTER_JUNK_HOSTS: 'filter_junk_hosts',
+  FILTER_JUNK_HOST_PREFIXES: 'filter_junk_host_prefixes',
+  FILTER_JUNK_USERNAME_SUBSTRINGS: 'filter_junk_username_substrings',
+  FILTER_SKIP_DOMAINS: 'filter_skip_domains',
+  FILTER_DOMAIN_FILTER: 'filter_domain_filter',
 } as const
 
 export type SettingKey = typeof SETTING_KEYS[keyof typeof SETTING_KEYS]
@@ -54,6 +61,31 @@ export interface BatchSettings {
   passwordStatsBatchSize: number
   filesBatchSize: number
   fileWriteParallelLimit: number
+}
+
+export interface FilterSettings {
+  junkPrefixes: string[]
+  junkHosts: string[]
+  junkHostPrefixes: string[]
+  junkUsernameSubstrings: string[]
+  skipDomains: string[]
+  domainFilter: string
+}
+
+// Default filter values — match ULPBot's hardcoded exclusions
+export const DEFAULT_FILTER_SETTINGS: FilterSettings = {
+  junkPrefixes: ['android://'],
+  junkHosts: ['localhost', '127.0.0.1', 'android'],
+  junkHostPrefixes: [
+    '192.168.', '10.',
+    '172.16.', '172.17.', '172.18.', '172.19.',
+    '172.20.', '172.21.', '172.22.', '172.23.',
+    '172.24.', '172.25.', '172.26.', '172.27.',
+    '172.28.', '172.29.', '172.30.', '172.31.',
+  ],
+  junkUsernameSubstrings: ['t.me', 'telegram.me', 'telegram'],
+  skipDomains: [],
+  domainFilter: '',
 }
 
 class SettingsManager {
@@ -364,6 +396,37 @@ class SettingsManager {
       s3UseSSL: s3UseSSL === 'true' || s3UseSSL === '1',
       migrationStatus,
       migrationProgress,
+    }
+  }
+
+  /**
+   * Get filter settings (convenience method)
+   */
+  async getFilterSettings(): Promise<FilterSettings> {
+    const [
+      junkPrefixes, junkHosts, junkHostPrefixes,
+      junkUsernameSubstrings, skipDomains, domainFilter,
+    ] = await Promise.all([
+      this.getSettingString(SETTING_KEYS.FILTER_JUNK_PREFIXES, ''),
+      this.getSettingString(SETTING_KEYS.FILTER_JUNK_HOSTS, ''),
+      this.getSettingString(SETTING_KEYS.FILTER_JUNK_HOST_PREFIXES, ''),
+      this.getSettingString(SETTING_KEYS.FILTER_JUNK_USERNAME_SUBSTRINGS, ''),
+      this.getSettingString(SETTING_KEYS.FILTER_SKIP_DOMAINS, ''),
+      this.getSettingString(SETTING_KEYS.FILTER_DOMAIN_FILTER, ''),
+    ])
+
+    const parseList = (s: string, defaults: string[]): string[] => {
+      const items = s.split(',').map(x => x.trim().toLowerCase()).filter(Boolean)
+      return items.length > 0 ? items : defaults
+    }
+
+    return {
+      junkPrefixes: parseList(junkPrefixes, DEFAULT_FILTER_SETTINGS.junkPrefixes),
+      junkHosts: parseList(junkHosts, DEFAULT_FILTER_SETTINGS.junkHosts),
+      junkHostPrefixes: parseList(junkHostPrefixes, DEFAULT_FILTER_SETTINGS.junkHostPrefixes),
+      junkUsernameSubstrings: parseList(junkUsernameSubstrings, DEFAULT_FILTER_SETTINGS.junkUsernameSubstrings),
+      skipDomains: parseList(skipDomains, []),
+      domainFilter: domainFilter.trim().toLowerCase(),
     }
   }
 
