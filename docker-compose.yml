@@ -86,7 +86,7 @@ services:
     container_name: bronvault_app
     restart: on-failure # SECURITY: Don't restart infinitely on crash loops (LOW-09)
     ports:
-      - "3000:3000"
+      - "9019:3000"
     environment:
       # Timezone
       TZ: Asia/Jakarta
